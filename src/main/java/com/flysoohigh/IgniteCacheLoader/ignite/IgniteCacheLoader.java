@@ -1,9 +1,14 @@
 package com.flysoohigh.IgniteCacheLoader.ignite;
 
+import com.flysoohigh.IgniteCacheLoader.streaming.example.StreamVisitorExample;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.client.ClientCache;
 import org.apache.ignite.client.IgniteClient;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,11 +40,52 @@ public class IgniteCacheLoader {
 
     @PostConstruct
     public void main() {
-        ClientConfiguration cfg = new ClientConfiguration();
-        cfg.setAddresses("127.0.0.1:10800");
-        IgniteClient igniteClient = Ignition.startClient(cfg);
+        Ignition.setClientMode(true);
 
-        csvFileLocations.forEach(fileLocation -> loadCache(igniteClient, fileLocation));
+//        try (Ignite ignite = Ignition.start("/home/summer/dev/IGNITE/apache-ignite-2.7.6-bin/examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("/home/summer/dev/IGNITE/apache-ignite-2.7.6-bin/config/default-config.xml")) {
+
+            CacheConfiguration<String, ImmutablePair<String, Integer>> instCfg = new CacheConfiguration<>("instCache");
+            instCfg.setIndexedTypes(String.class, ImmutablePair.class);
+
+            try (IgniteCache<String, ImmutablePair<String, Integer>> instCache = ignite.getOrCreateCache(instCfg)){
+                final String cacheName = instCache.getName();
+                try (IgniteDataStreamer<String, ImmutablePair<String, Integer>> streamer = ignite.dataStreamer(cacheName)){
+                    logger.info("Start loading {} cache", cacheName);
+                    StopWatch stopWatch = new StopWatch();
+                    stopWatch.start();
+//                    ClientCache<String, ImmutablePair<String, Integer>> myCache = igniteClient.getOrCreateCache(cacheName);
+                    String line;
+
+                    try(BufferedReader br = new BufferedReader(new FileReader("/home/summer/dev/JAVA/IgniteCacheLoader/token-data_4.csv"))) {
+                        while ((line = br.readLine()) != null) {
+                            String[] chunks = line.split(";");
+                            String shardId = chunks[0];
+                            String jibber = chunks[1];
+                            String dekId = chunks[2].trim();
+                            streamer.addData(shardId, new ImmutablePair<>(jibber, Integer.valueOf(dekId)));
+                        }
+                        logger.info("End loading {} cache", cacheName);
+                        stopWatch.stop();
+                        String seconds = new DecimalFormat("#.##").format(stopWatch.getTotalTimeSeconds());
+                        logger.info("Total time loading {} cache is {} sec", cacheName, seconds);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            } finally {
+                // Distributed cache could be removed from cluster only by #destroyCache() call.
+                ignite.destroyCache(instCfg.getName());
+            }
+
+        }
+
+//        ClientConfiguration cfg = new ClientConfiguration();
+//        cfg.setAddresses("127.0.0.1:10800");
+//        IgniteClient igniteClient = Ignition.startClient(cfg);
+
+//        csvFileLocations.forEach(fileLocation -> loadCache(igniteClient, fileLocation));
     }
 
     private void loadCache(IgniteClient igniteClient, String csvFileLocation) {
