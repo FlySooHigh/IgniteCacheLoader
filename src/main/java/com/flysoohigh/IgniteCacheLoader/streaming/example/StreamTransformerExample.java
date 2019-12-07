@@ -36,7 +36,7 @@ public class StreamTransformerExample {
         // Mark this cluster member as client.
         Ignition.setClientMode(true);
 
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("/home/summer/dev/IGNITE/apache-ignite-2.7.6-bin/examples/config/example-ignite.xml")) {
 //            if (!ExamplesUtils.hasServerNodes(ignite))
 //                return;
 

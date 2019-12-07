@@ -35,6 +35,7 @@ public class IgniteCacheLoader {
 
     private static final int TEMP_MAP_SIZE_TO_DUMP_INTO_CACHE = 1_000;
     private static final String REGEX = "/([-_a-zA-Z0-9]+)\\.csv";
+    private static final String CACHE_NAME = "TOKEN6_ZPAN";
 
     Logger logger = LoggerFactory.getLogger(IgniteCacheLoader.class);
 
@@ -45,11 +46,11 @@ public class IgniteCacheLoader {
 //        try (Ignite ignite = Ignition.start("/home/summer/dev/IGNITE/apache-ignite-2.7.6-bin/examples/config/example-ignite.xml")) {
         try (Ignite ignite = Ignition.start("/home/summer/dev/IGNITE/apache-ignite-2.7.6-bin/config/default-config.xml")) {
 
-            CacheConfiguration<String, ImmutablePair<String, Integer>> instCfg = new CacheConfiguration<>("instCache");
-            instCfg.setIndexedTypes(String.class, ImmutablePair.class);
+            CacheConfiguration<String, ImmutablePair<String, Integer>> cacheConfig = new CacheConfiguration<>(CACHE_NAME);
+            cacheConfig.setIndexedTypes(String.class, ImmutablePair.class);
 
-            try (IgniteCache<String, ImmutablePair<String, Integer>> instCache = ignite.getOrCreateCache(instCfg)){
-                final String cacheName = instCache.getName();
+            try (IgniteCache<String, ImmutablePair<String, Integer>> instCache = ignite.getOrCreateCache(cacheConfig)){
+                String cacheName = instCache.getName();
                 try (IgniteDataStreamer<String, ImmutablePair<String, Integer>> streamer = ignite.dataStreamer(cacheName)){
                     logger.info("Start loading {} cache", cacheName);
                     StopWatch stopWatch = new StopWatch();
@@ -76,7 +77,7 @@ public class IgniteCacheLoader {
 
             } finally {
                 // Distributed cache could be removed from cluster only by #destroyCache() call.
-                ignite.destroyCache(instCfg.getName());
+//                ignite.destroyCache(cacheConfig.getName());
             }
 
         }
@@ -89,7 +90,7 @@ public class IgniteCacheLoader {
     }
 
     private void loadCache(IgniteClient igniteClient, String csvFileLocation) {
-        String cacheName = extractCacheName(csvFileLocation);
+        String cacheName = extractcacheName(csvFileLocation);
         logger.info("Start loading {} cache", cacheName);
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
@@ -120,7 +121,7 @@ public class IgniteCacheLoader {
         }
     }
 
-    private static String extractCacheName(String CSV_FILE_LOCATION) {
+    private static String extractcacheName(String CSV_FILE_LOCATION) {
         Matcher matcher = Pattern.compile(REGEX).matcher(CSV_FILE_LOCATION);
         String cacheName = "";
         while (matcher.find()) {
